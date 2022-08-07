@@ -513,6 +513,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
+		// 线程安全
 		synchronized (this.startupShutdownMonitor) {
 			//1、 Prepare this context for refreshing.
 			//准备刷新容器，刷新前的处理
@@ -557,7 +558,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				initMessageSource();
 
 				//8、 Initialize event multicaster for this context.
-				//初始化事件派发器，用做spring的事件驱动
+				//初始化事件派发器，用做spring的事件驱动，后面向容器中发布事件会获取这个多波器
 				initApplicationEventMulticaster();
 
 				//9、 Initialize other special beans in specific context subclasses.
@@ -633,7 +634,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize any placeholder property sources in the context environment.
-		//在上下文环境中初始化任何占位符属性源。（由子容器去实现）
+		//在上下文环境中初始化任何占位符属性源。（由子容器去实现），自定义属性设置
 		initPropertySources();
 
 		// Validate that all properties marked as required are resolvable:
@@ -833,6 +834,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * Initialize the ApplicationEventMulticaster.
 	 * Uses SimpleApplicationEventMulticaster if none defined in the context.
 	 * @see org.springframework.context.event.SimpleApplicationEventMulticaster
+	 * 初始化容器事件多播器，发布事件的时候会获取这个多播器，然后通过多播器去获取所有相关的监听，然后调用监听器的方法
 	 */
 	protected void initApplicationEventMulticaster() {
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
@@ -904,8 +906,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let post-processors apply to them!
+		// 获取 ApplicationListener 类型的监听器
 		String[] listenerBeanNames = getBeanNamesForType(ApplicationListener.class, true, false);
 		for (String listenerBeanName : listenerBeanNames) {
+			// 将获取到的监听器添加到多播器中，以后发布事件的时候就可以通过事件多播器来获取对应的监听器了
 			getApplicationEventMulticaster().addApplicationListenerBean(listenerBeanName);
 		}
 
@@ -954,7 +958,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
-		//实例化对象
+		//实例化对象，这步是重点
 		beanFactory.preInstantiateSingletons();
 	}
 
@@ -968,9 +972,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		clearResourceCaches();
 
 		// Initialize lifecycle processor for this context.
+		// 初始化和生命周期有关的后置处理器
 		initLifecycleProcessor();
 
 		// Propagate refresh to lifecycle processor first.
+		// 拿到前面定义的生命周期处理器，回调 onRefresh() 方法
 		getLifecycleProcessor().onRefresh();
 
 		// Publish the final event.

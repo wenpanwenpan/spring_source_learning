@@ -59,9 +59,11 @@ public class AspectJAfterThrowingAdvice extends AbstractAspectJAdvice
 	@Override
 	public Object invoke(MethodInvocation mi) throws Throwable {
 		try {
+			// 这里又调用 MethodInvocation.proceed()方法，在该方法中会继续获取下一个拦截器链上的节点（即Return通知）
 			return mi.proceed();
 		}
 		catch (Throwable ex) {
+			// 一旦return通知执行出现异常（比如目标方法执行异常），则不会执行return通知，直接这里执行异常通知
 			if (shouldInvokeOnThrowing(ex)) {
 				invokeAdviceMethod(getJoinPointMatch(), null, ex);
 			}

@@ -52,6 +52,31 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 
+	/**
+	 * @description:
+	 * 下面方法其实就是两步：
+	 * 一、执行BeanDefinitionRegistryPostProcessor的方法
+	 *  ​		1）、获取所有的BeanDefinitionRegistryPostProcessor；
+	 *  ​		2）、看先执行实现了PriorityOrdered优先级接口的BeanDefinitionRegistryPostProcessor、
+	 *  ​			postProcessor.postProcessBeanDefinitionRegistry(registry)
+	 *  ​		3）、在执行实现了Ordered顺序接口的BeanDefinitionRegistryPostProcessor；
+	 *  ​			postProcessor.postProcessBeanDefinitionRegistry(registry)
+	 *  ​		4）、最后执行没有实现任何优先级或者是顺序接口的BeanDefinitionRegistryPostProcessors；
+	 *  ​			postProcessor.postProcessBeanDefinitionRegistry(registry)
+	 * 二、再执行BeanFactoryPostProcessor的方法
+	 *  ​	1）、获取所有的BeanFactoryPostProcessor
+	 *  ​	2）、看先执行实现了PriorityOrdered优先级接口的BeanFactoryPostProcessor、
+	 *  ​		postProcessor.postProcessBeanFactory()
+	 *  ​	3）、在执行实现了Ordered顺序接口的BeanFactoryPostProcessor；
+	 *  ​		postProcessor.postProcessBeanFactory()
+	 *  ​	4）、最后执行没有实现任何优先级或者是顺序接口的BeanFactoryPostProcessor；
+	 *  ​		postProcessor.postProcessBeanFactory()
+	 * @param beanFactory
+	 * @param beanFactoryPostProcessors
+	 * @return: void
+	 * @date: 2021/3/6 11:48 下午
+	 * @auther: Mr_wenpan@163.com
+	 */
 	public static void invokeBeanFactoryPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
 
@@ -156,6 +181,7 @@ final class PostProcessorRegistrationDelegate {
 			invokeBeanFactoryPostProcessors(beanFactoryPostProcessors, beanFactory);
 		}
 
+		// ===========================执行实现了 BeanFactoryPostProcessor 类型的postProcessor ===========================
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let the bean factory post-processors apply to them!
 		//这里执行实现了 BeanFactoryPostProcessor 接口的 postProcessBeanFactory() 方法
@@ -207,14 +233,34 @@ final class PostProcessorRegistrationDelegate {
 		beanFactory.clearMetadataCache();
 	}
 
+	/**
+	 * @description:
+	 * 该方法的主要作用是：先获取容器中所有的 BeanPostProcessor 然后再将他们按照是否实现了 priorityOrdered，ordered接口以及普通
+	 * BeanPostProcessor进行分类，分别放在不同的list集合中，然后排序，然后按照顺序将他们注册到容器中。顺序如下：
+	 * 1）、获取所有的 BeanPostProcessor;后置处理器都默认可以通过PriorityOrdered、Ordered接口来执行优先级
+	 * 2）、先注册PriorityOrdered优先级接口的BeanPostProcessor；
+	 * 		把每一个BeanPostProcessor；添加到BeanFactory中
+	 * 		beanFactory.addBeanPostProcessor(postProcessor);
+	 * 3）、再注册Ordered接口的
+	 * 4）、最后注册没有实现任何优先级接口的
+	 * 5）、最终注册MergedBeanDefinitionPostProcessor；
+	 * 6）、注册一个ApplicationListenerDetector；来在Bean创建完成后检查是否是ApplicationListener
+	 * @param beanFactory bean工厂
+	 * @param applicationContext 容器上下文
+	 * @return: void
+	 * @date: 2021/3/8 11:17 上午
+	 * @auther: Mr_wenpan@163.com
+	 */
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
+		// 通过类型获取容器中所有的 postProcessor
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
 		// Register BeanPostProcessorChecker that logs an info message when
 		// a bean is created during BeanPostProcessor instantiation, i.e. when
 		// a bean is not eligible for getting processed by all BeanPostProcessors.
+		// 往容器中再添加一个 BeanPostProcessor
 		int beanProcessorTargetCount = beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length;
 		beanFactory.addBeanPostProcessor(new BeanPostProcessorChecker(beanFactory, beanProcessorTargetCount));
 

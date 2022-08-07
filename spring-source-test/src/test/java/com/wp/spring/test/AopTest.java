@@ -1,14 +1,12 @@
 package com.wp.spring.test;
 
 import com.wp.spring.aop.service.MathCalculatorServiceImpl;
-import com.wp.spring.config.MainConfigOfAop;
+import com.wp.spring.aop.config.MainConfigOfAop;
 import org.junit.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
- * @description:
- * @author: panfeng.wen@hand-china
- * @create: 2021/03/06 17:58
+ * @author panfeng.wen@hand-china 2021/03/06 17:58
  */
 public class AopTest {
 

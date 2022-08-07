@@ -131,10 +131,12 @@ public class InvocableHandlerMethod extends HandlerMethod {
 	public Object invokeForRequest(NativeWebRequest request, @Nullable ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
 
+		// 将request里的参数转换为handler里需要的参数形式
 		Object[] args = getMethodArgumentValues(request, mavContainer, providedArgs);
 		if (logger.isTraceEnabled()) {
 			logger.trace("Arguments: " + Arrays.toString(args));
 		}
+		// 这里的doInvoke主要是结合处理后的参数，使用反射对目标方法发起调用，args表示反射执行handler方法时所需要的参数
 		return doInvoke(args);
 	}
 
@@ -146,24 +148,31 @@ public class InvocableHandlerMethod extends HandlerMethod {
 	 */
 	protected Object[] getMethodArgumentValues(NativeWebRequest request, @Nullable ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
-
+		// 获取到当前handler所声明的所有参数，主要包括参数名，参数类型，参数位置，参数所标注的注解等
 		MethodParameter[] parameters = getMethodParameters();
 		if (ObjectUtils.isEmpty(parameters)) {
 			return EMPTY_ARGS;
 		}
 
 		Object[] args = new Object[parameters.length];
+		// 遍历handler需要的所有的参数
 		for (int i = 0; i < parameters.length; i++) {
 			MethodParameter parameter = parameters[i];
 			parameter.initParameterNameDiscovery(this.parameterNameDiscoverer);
+			// providedArgs是调用方提供的参数，这里主要是判断这些参数中是否有当前类型，如果有，则使用调用方提供的参数，对于请求处理而言，默认情况，
+			// 调用方提供的参数都是长度为0的数组
 			args[i] = findProvidedArgument(parameter, providedArgs);
 			if (args[i] != null) {
 				continue;
 			}
+			// 如果在调用方提供的参数中不能找到当前类型的参数值，则遍历spring容器中所有的ArgumentResolver，判断哪种类型的Resolver支持对当前参数的解析，
+			// 这里的判断方式比较简单，比如：RequestParamMethodArgumentResolver就是判断参数是否使用@RequestParam注解标注
 			if (!this.resolvers.supportsParameter(parameter)) {
 				throw new IllegalStateException(formatArgumentError(parameter, "No suitable resolver"));
 			}
 			try {
+				// 如果找到了能对当前参数进行处理的 ArgumentResolver 则调用他的resolveArgument方法，
+				// 从request中获取对应的参数值，并进行转换
 				args[i] = this.resolvers.resolveArgument(parameter, mavContainer, request, this.dataBinderFactory);
 			}
 			catch (Exception ex) {
@@ -187,6 +196,7 @@ public class InvocableHandlerMethod extends HandlerMethod {
 	protected Object doInvoke(Object... args) throws Exception {
 		ReflectionUtils.makeAccessible(getBridgedMethod());
 		try {
+			// 反射调用handler方法
 			return getBridgedMethod().invoke(getBean(), args);
 		}
 		catch (IllegalArgumentException ex) {

@@ -182,13 +182,16 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+		// 从一级缓存中找
 		Object singletonObject = this.singletonObjects.get(beanName);
 		// isSingletonCurrentlyInCreation 判断单例是否正在创建
 		// 如果singletonsCurrentlyInCreation 集合中有值说明正在创建，
 		// 等待下面的那个getSingleton()方法中的创建过程完成后释放锁，然后再获取对象
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			synchronized (this.singletonObjects) {
+				// 从二级缓存中找
 				singletonObject = this.earlySingletonObjects.get(beanName);
+				// 如果从二级缓存中没有找到并且是否允许提前引用
 				if (singletonObject == null && allowEarlyReference) {
 					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 					if (singletonFactory != null) {
@@ -211,12 +214,14 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param singletonFactory the ObjectFactory to lazily create the singleton
 	 * with, if necessary
 	 * @return the registered singleton object
+	 * 这里是单例池中没有获取到对象以后，该方法会先锁住单例池，然后创建单例对象，然后放在单例池中，然后返回
 	 */
 	public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(beanName, "Bean name must not be null");
 		//singletonObjects是IOC的容器
-		// 这个创建过程是加锁的
+		// 这个创建过程是加锁的，锁住单例池
 		synchronized (this.singletonObjects) {
+			// 先从单例池（singletonObjects）中获取，如果获取到了就直接返回，没有获取到则创建
 			Object singletonObject = this.singletonObjects.get(beanName);
 			if (singletonObject == null) {
 				if (this.singletonsCurrentlyInDestruction) {
@@ -235,7 +240,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
-					//创建对象，应用后置处理，上一个方法的lambda表达式
+					// 创建对象，应用后置处理，上一个方法的lambda表达式
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
 				}
@@ -263,6 +268,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {
+					// 创建成功后将bean添加到单例池中
 					addSingleton(beanName, singletonObject);
 				}
 			}

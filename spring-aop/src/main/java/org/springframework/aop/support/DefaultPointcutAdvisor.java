@@ -55,6 +55,7 @@ public class DefaultPointcutAdvisor extends AbstractGenericPointcutAdvisor imple
 	 * @param advice the Advice to use
 	 */
 	public DefaultPointcutAdvisor(Advice advice) {
+		// 第一个参数传入true，表示对每个方法都切入
 		this(Pointcut.TRUE, advice);
 	}
 

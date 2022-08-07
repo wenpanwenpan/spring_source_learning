@@ -1,4 +1,4 @@
-package com.wp.spring.aspect;
+package com.wp.spring.aop.aspect;
 
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.*;

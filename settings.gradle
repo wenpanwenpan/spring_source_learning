@@ -34,4 +34,5 @@ include 'pyq-mvc'
 include 'spring-source-test'
 include 'spring-study-test'
 include 'spring-study-test'
+include 'spring-mvc-source-test'
 

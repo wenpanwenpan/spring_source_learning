@@ -860,6 +860,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}
 				}
 				else {
+					// 非工厂bean的单例bean会从这里创建单例对象
 					getBean(beanName);
 				}
 			}
@@ -868,6 +869,8 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		// Trigger post-initialization callback for all applicable beans...
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName);
+			// 获取到所有的已经创建的bean，判断该bean是否是实现了 SmartInitializingSingleton 接口，
+			// 如果是则调用他的 afterSingletonsInstantiated 方法
 			if (singletonInstance instanceof SmartInitializingSingleton) {
 				final SmartInitializingSingleton smartSingleton = (SmartInitializingSingleton) singletonInstance;
 				if (System.getSecurityManager() != null) {
@@ -877,6 +880,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 					}, getAccessControlContext());
 				}
 				else {
+					// 如果bean是 SmartInitializingSingleton 类型，则在这里执行他的 afterSingletonsInstantiated 方法
 					smartSingleton.afterSingletonsInstantiated();
 				}
 			}

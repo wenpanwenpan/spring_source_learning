@@ -47,6 +47,16 @@ import org.springframework.lang.Nullable;
 @SuppressWarnings("serial")
 public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializable {
 
+	/**
+	 * @description:
+	 * 该方法的主要作用就是遍历所有的增强器，然后将增强器封装成一个个的 interceptor 然后返回
+	 * @param config
+	 * @param method
+	 * @param targetClass
+	 * @return: java.util.List<java.lang.Object>
+	 * @date: 2021/3/8 12:11 下午
+	 * @auther: Mr_wenpan@163.com
+	 */
 	@Override
 	public List<Object> getInterceptorsAndDynamicInterceptionAdvice(
 			Advised config, Method method, @Nullable Class<?> targetClass) {
@@ -76,6 +86,7 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 						match = mm.matches(method, actualClass);
 					}
 					if (match) {
+						// 将增强器转换为 MethodInterceptor并且添加到集合中
 						MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
 						if (mm.isRuntime()) {
 							// Creating a new object instance in the getInterceptors() method
@@ -93,16 +104,18 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 			else if (advisor instanceof IntroductionAdvisor) {
 				IntroductionAdvisor ia = (IntroductionAdvisor) advisor;
 				if (config.isPreFiltered() || ia.getClassFilter().matches(actualClass)) {
+					// 将增强器转换为 MethodInterceptor并且添加到集合中
 					Interceptor[] interceptors = registry.getInterceptors(advisor);
 					interceptorList.addAll(Arrays.asList(interceptors));
 				}
 			}
 			else {
+				// 将增强器转换为 MethodInterceptor并且添加到集合中
 				Interceptor[] interceptors = registry.getInterceptors(advisor);
 				interceptorList.addAll(Arrays.asList(interceptors));
 			}
 		}
-
+		// 返回  interceptorList 集合
 		return interceptorList;
 	}
 

@@ -658,6 +658,21 @@ class CglibAopProxy implements AopProxy, Serializable {
 			this.advised = advised;
 		}
 
+		/**
+		 * @description:
+		 *
+		 * @param proxy 这是代理对象，比如aop做日志切面的时候，需要被切入的类都会被创建一个代理对象注入到容器中，每次调用被切入的类的方法的时候
+		 *              其实就是调用的代理对象的代理方法，也就是下面这个 intercept 方法。然后在整个方法中会获取到该方法能用的增强器，将这些
+		 *              增强器都包装成一个个的interceptor，然后判断是否增强器为空，如果为空则直接执行目标方法，如果不为空则创建一个
+		 *              CglibMethodInvocation对象然后将代理方法，interceptorList都传递进去，以责任链的模式调用一个个的增强器执行，这里就可以
+		 *              实现先调用前置通知，然后再调用目标方法，后置通知，返回通知，异常通知等
+		 * @param method 要执行的方法
+		 * @param args 方法参数
+		 * @param methodProxy 代理对象对应的方法 比如：需要执行的目标方法是 div(1,1)那么这里的 methodProxy 就是对这个方法的代理方法
+		 * @return: java.lang.Object
+		 * @date: 2021/3/8 1:00 下午
+		 * @auther: Mr_wenpan@163.com
+		 */
 		@Override
 		@Nullable
 		public Object intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
@@ -674,22 +689,28 @@ class CglibAopProxy implements AopProxy, Serializable {
 				// Get as late as possible to minimize the time we "own" the target, in case it comes from a pool...
 				target = targetSource.getTarget();
 				Class<?> targetClass = (target != null ? target.getClass() : null);
+				// 获取到该方法可用的所有拦截器链（比如：切面的每个通知方法）
 				List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
 				Object retVal;
 				// Check whether we only have one InvokerInterceptor: that is,
 				// no real advice, but just reflective invocation of the target.
+				// 如果拦截器链是空的，则直接执行目标方法
 				if (chain.isEmpty() && Modifier.isPublic(method.getModifiers())) {
 					// We can skip creating a MethodInvocation: just invoke the target directly.
 					// Note that the final invoker must be an InvokerInterceptor, so we know
 					// it does nothing but a reflective operation on the target, and no hot
 					// swapping or fancy proxying.
 					Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(method, args);
+					// 直接执行目标方法
 					retVal = methodProxy.invoke(target, argsToUse);
 				}
 				else {
 					// We need to create a method invocation...
+					// 将该方法能用的增强器集合封装到 CglibMethodInvocation 中，然后调用 CglibMethodInvocation.proceed()方法
+					// 这里是以责任链的模式调用的，这里体现了为什么前置通知在目标方法前执行，后置通知在目标方法之后执行，需要重点探究
 					retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();
 				}
+				// 处理返回类型
 				retVal = processReturnType(proxy, target, method, retVal);
 				return retVal;
 			}
@@ -749,6 +770,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 		@Override
 		protected Object invokeJoinpoint() throws Throwable {
 			if (this.methodProxy != null) {
+				// AOP前置通知执行完毕后调用这里的目标方法
 				return this.methodProxy.invoke(this.target, this.arguments);
 			}
 			else {

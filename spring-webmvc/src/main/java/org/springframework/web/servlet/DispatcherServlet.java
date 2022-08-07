@@ -940,6 +940,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	@Override
 	protected void doService(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		// 处理日志
 		logRequest(request);
 
 		// Keep a snapshot of the request attributes in case of an include,
@@ -962,6 +963,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		request.setAttribute(THEME_RESOLVER_ATTRIBUTE, this.themeResolver);
 		request.setAttribute(THEME_SOURCE_ATTRIBUTE, getThemeSource());
 
+		// 管理重定向参数处理的
 		if (this.flashMapManager != null) {
 			FlashMap inputFlashMap = this.flashMapManager.retrieveAndUpdate(request, response);
 			if (inputFlashMap != null) {
@@ -972,6 +974,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		}
 
 		try {
+			// 派发请求给能处理该请求的handler方法
 			doDispatch(request, response);
 		}
 		finally {
@@ -1025,6 +1028,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * to find the first that supports the handler class.
 	 * <p>All HTTP methods are handled by this method. It's up to HandlerAdapters or handlers
 	 * themselves to decide which methods are acceptable.
+	 * 【这是一个非常核心的方法】
 	 * @param request current HTTP request
 	 * @param response current HTTP response
 	 * @throws Exception in case of any kind of processing failure
@@ -1032,6 +1036,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
 		HttpServletRequest processedRequest = request;
 		HandlerExecutionChain mappedHandler = null;
+		// 是否是文件上传
 		boolean multipartRequestParsed = false;
 
 		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
@@ -1041,21 +1046,25 @@ public class DispatcherServlet extends FrameworkServlet {
 			Exception dispatchException = null;
 
 			try {
-				//检查请求中是否有上传操作
+				//检查请求中是否有上传操作（检查是否是文件上传请求）
 				processedRequest = checkMultipart(request);
+				// 如果不相等，则说明是文件上传请求
 				multipartRequestParsed = (processedRequest != request);
 
 				// Determine handler for the current request.
 				//确定当前请求的处理程序执行链 HandlerExecutionChain
 				//推断 controller 和 handler 的类型，有 3 种类型
+				// 获取处理当前请求的controller（这里也称为handler），即处理器，这里并不是直接返回controller
+				// 而是返回HandlerExecutionChain请求处理链对象，该对象封装了handler和intercepter
 				mappedHandler = getHandler(processedRequest);
 				if (mappedHandler == null) {
+					// 如果handler为空，则返回404
 					noHandlerFound(processedRequest, response);
 					return;
 				}
 
 				// Determine handler adapter for the current request.
-				//适配器
+				//适配器（获取处理请求的处理器适配器 handlerAdapter）
 				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 				// 这里才确定使用那个方法去处理
 
@@ -1074,14 +1083,16 @@ public class DispatcherServlet extends FrameworkServlet {
 				}
 
 				// Actually invoke the handler.
-				// 调用实际处理器
+				// 【重点】调用实际处理器（实际处理请求，返回结果视图对象）
 				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
 				if (asyncManager.isConcurrentHandlingStarted()) {
 					return;
 				}
 
+				// 结果视图对象处理（默认视图对象）
 				applyDefaultViewName(processedRequest, mv);
+				// 执行后置拦截器
 				mappedHandler.applyPostHandle(processedRequest, response, mv);
 			}
 			catch (Exception ex) {
@@ -1092,9 +1103,11 @@ public class DispatcherServlet extends FrameworkServlet {
 				// making them available for @ExceptionHandler methods and other scenarios.
 				dispatchException = new NestedServletException("Handler dispatch failed", err);
 			}
+			// 【重点】处理handler结果（也就是页面跳转）
 			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
 		}
 		catch (Exception ex) {
+			// 最终会调用HandlerIntercepter的afterCompletion方法
 			triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
 		}
 		catch (Throwable err) {
@@ -1385,9 +1398,11 @@ public class DispatcherServlet extends FrameworkServlet {
 		response.setLocale(locale);
 
 		View view;
+		// 获取handler里返回的视图名称
 		String viewName = mv.getViewName();
 		if (viewName != null) {
 			// We need to resolve the view name.
+			// 根据视图名称解析为视图
 			view = resolveViewName(viewName, mv.getModelInternal(), locale, request);
 			if (view == null) {
 				throw new ServletException("Could not resolve view with name '" + mv.getViewName() +

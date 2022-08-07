@@ -339,6 +339,7 @@ public abstract class AopUtils {
 
 		// Use reflection to invoke the method.
 		try {
+			// AOP的前置通知执行完毕后在这里执行目标方法
 			ReflectionUtils.makeAccessible(method);
 			return method.invoke(target, args);
 		}
